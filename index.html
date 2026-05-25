@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico Operacional — Santa Casa BH</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #ff0032;
+  --dark: #323232;
+  --mid: #b4b4b4;
+  --light: #a3a3a3;
+  --white: #ffffff;
+  --off: #f5f5f5;
+  --black: #0a0a0a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:#111;color:var(--white);overflow:hidden;}
+.slides-wrapper{width:100vw;height:100vh;position:relative;}
+.slide{position:absolute;inset:0;width:100%;height:100%;display:none;flex-direction:column;overflow:hidden;}
+.slide.active{display:flex;}
+
+/* NAV */
+.nav{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;z-index:1000;background:rgba(8,8,8,0.9);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.09);padding:9px 18px;border-radius:100px;}
+.nav button{background:none;border:none;color:var(--mid);cursor:pointer;font-size:18px;display:flex;align-items:center;transition:color .2s;padding:2px 6px;}
+.nav button:hover{color:var(--white);}
+.nav button:disabled{color:#333;cursor:default;}
+.slide-counter{font-family:'DM Mono',monospace;font-size:11px;color:var(--light);min-width:52px;text-align:center;letter-spacing:1px;}
+.dots{display:flex;gap:5px;align-items:center;}
+.dot{width:5px;height:5px;border-radius:50%;background:#333;cursor:pointer;transition:all .2s;}
+.dot.active{background:var(--red);width:18px;border-radius:3px;}
+
+/* SHARED */
+.hdr{padding:24px 52px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:9px;}
+.logo-bar{width:3px;height:24px;background:var(--red);}
+.logo-txt{font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;}
+.hdr-n{font-family:'DM Mono',monospace;font-size:10px;color:#444;letter-spacing:1px;}
+.tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.tag::before{content:'';display:block;width:18px;height:1px;background:var(--red);}
+.t-dark{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,4vw,54px);color:var(--dark);line-height:.95;margin-bottom:8px;}
+.t-dark span{color:var(--red);}
+.t-white{font-family:'Bebas Neue',sans-serif;font-size:clamp(30px,3.8vw,50px);color:var(--white);line-height:.95;margin-bottom:6px;}
+.t-white span{color:var(--red);}
+.body-txt{font-size:13px;line-height:1.75;color:#666;}
+.insight{background:rgba(255,0,50,.09);border:1px solid rgba(255,0,50,.28);border-left:3px solid var(--red);padding:14px 18px;}
+.insight-t{font-size:9px;font-weight:700;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.insight p{font-size:12px;color:var(--mid);line-height:1.65;}
+.insight p strong{color:var(--white);}
+.insight.light{background:rgba(255,0,50,.05);border-color:rgba(255,0,50,.18);}
+.insight.light p{color:#555;}
+.insight.light p strong{color:var(--dark);}
+
+/* KPI */
+.kpi{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);padding:18px;}
+.kpi.hl{background:var(--red);border-color:var(--red);}
+.kpi-lbl{font-size:9px;font-weight:500;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.kpi.hl .kpi-lbl{color:rgba(255,255,255,.75);}
+.kpi-val{font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--white);line-height:1;}
+.kpi-val sub{font-size:18px;font-family:'DM Sans',sans-serif;font-weight:300;}
+.kpi-d{font-size:10px;color:rgba(255,255,255,.35);margin-top:4px;}
+.kpi.hl .kpi-d{color:rgba(255,255,255,.65);}
+
+/* BAR CHART */
+.bar-row{display:grid;gap:12px;align-items:center;}
+.bar-lbl{font-size:11px;color:var(--mid);line-height:1.3;text-align:right;}
+.bar-trk{background:rgba(255,255,255,.06);height:28px;overflow:hidden;}
+.bar-fill{height:100%;transition:width .7s;}
+.bar-r{font-family:'DM Mono',monospace;font-size:11px;color:var(--white);}
+
+/* TABLE */
+.tbl-hdr{display:grid;padding:7px 10px;background:rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.08);}
+.tbl-hdr span{font-size:8px;color:#555;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+.tbl-row{display:grid;padding:9px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;}
+.tbl-row:last-child{border:none;}
+.tbl-row.hi{background:rgba(255,0,50,.07);}
+.cell-name{font-size:10px;font-weight:600;color:var(--white);line-height:1.3;}
+.cell-sub{font-size:9px;color:#555;margin-top:2px;}
+.cell-area{font-size:9px;color:var(--mid);}
+.cell-per{font-size:9px;color:#666;letter-spacing:1px;text-transform:uppercase;}
+.cell-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--white);text-align:center;}
+.cell-num.hi{color:var(--red);font-weight:700;}
+.badge{display:inline-block;padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:1px;border-radius:2px;text-transform:uppercase;text-align:center;}
+.badge.r{background:var(--red);color:#fff;}
+.badge.r2{background:#7a0020;color:#ffaaaa;}
+.badge.g{background:#14532d;color:#86efac;}
+.badge.y{background:#713f12;color:#fde68a;}
+
+/* LEGEND */
+.leg-row{display:flex;align-items:center;gap:10px;padding:6px 0;}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.leg-txt{font-size:11px;color:var(--mid);}
+.leg-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--white);margin-left:auto;}
+
+/* RANK ITEM */
+.rank-item{display:grid;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+.rank-n{font-family:'Bebas Neue',sans-serif;font-size:24px;color:rgba(255,255,255,.18);text-align:center;}
+.rank-n.r{color:var(--red);}
+.rank-hrs{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white);text-align:right;}
+.rank-unit{font-size:9px;color:#555;text-align:right;letter-spacing:1px;}
+
+/* PLAN */
+.plan-phase{font-family:'DM Mono',monospace;font-size:9px;color:var(--red);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,0,50,.25);}
+.plan-item{display:flex;gap:10px;padding:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);margin-bottom:8px;}
+.plan-dot{width:5px;height:5px;border-radius:50%;background:var(--red);margin-top:5px;flex-shrink:0;}
+.plan-txt{font-size:11px;color:var(--mid);line-height:1.6;}
+.plan-txt strong{color:var(--white);}
+
+/* SCOPE CARD */
+.sc-card{background:var(--white);border:1px solid #e8e8e8;border-left:3px solid var(--red);padding:14px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.sc-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red);line-height:1;min-width:54px;}
+.sc-lbl{font-size:11px;font-weight:700;color:var(--dark);text-transform:uppercase;letter-spacing:1px;}
+.sc-d{font-size:10px;color:var(--light);margin-top:2px;}
+
+/* CONCEPT BOX */
+.cb{background:var(--dark);padding:20px;position:relative;overflow:hidden;margin-bottom:12px;}
+.cb::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:var(--red);}
+.cb-t{font-family:'DM Mono',monospace;font-size:9px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;}
+.cb-p{font-size:12px;color:var(--mid);line-height:1.65;}
+.cb-p strong{color:var(--white);}
+
+/* GAUGE */
+.gauge-big{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--dark);line-height:1;}
+.gauge-big span{color:var(--red);}
+
+/* ACTION CARD */
+.ac{background:var(--dark);padding:16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
+.ac-icon{width:30px;height:30px;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.ac-t{font-size:10px;font-weight:700;color:var(--white);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.ac-d{font-size:11px;color:var(--mid);line-height:1.6;}
+
+/* VALUE CARD */
+.vc{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--white);border:1px solid #e8e8e8;border-left:4px solid;margin-bottom:8px;}
+.vc-pct{font-family:'Bebas Neue',sans-serif;font-size:32px;line-height:1;min-width:64px;}
+.vc-lbl{font-size:10px;font-weight:700;color:var(--dark);text-transform:uppercase;letter-spacing:1px;}
+.vc-sub{font-size:10px;color:var(--light);margin-top:1px;}
+
+/* TIMELINE */
+.tl{display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);}
+.tl-b{padding:10px 16px;border-right:1px solid rgba(255,255,255,.06);}
+.tl-b:last-child{border:none;}
+.tl-p{font-family:'DM Mono',monospace;font-size:9px;color:var(--light);letter-spacing:2px;margin-bottom:3px;}
+.tl-a{font-size:11px;color:var(--white);font-weight:500;}
+
+/* SUP BLOCK for slide 12 */
+.sup-block{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-left:2px solid var(--red);padding:10px 14px;margin-bottom:8px;}
+.sup-name{font-size:9px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.sup-row{display:flex;align-items:baseline;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.sup-row:last-child{border:none;}
+.sup-rank{font-family:'Bebas Neue',sans-serif;font-size:14px;color:rgba(255,255,255,.3);min-width:16px;}
+.sup-activity{font-size:10px;color:var(--mid);flex:1;line-height:1.3;}
+.sup-area{font-size:9px;color:#555;}
+.sup-pont{font-family:'DM Mono',monospace;font-size:10px;color:var(--white);min-width:28px;text-align:right;}
+
+/* ACCENT LINE */
+.accent-top{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),transparent);}
+
+/* Storytelling chapter badge */
+.chapter{display:inline-flex;align-items:center;gap:8px;background:rgba(255,0,50,.12);border:1px solid rgba(255,0,50,.3);padding:5px 12px;border-radius:2px;font-family:'DM Mono',monospace;font-size:9px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;}
+
+.kbd{position:fixed;top:16px;right:20px;font-family:'DM Mono',monospace;font-size:9px;color:#2a2a2a;letter-spacing:1px;z-index:999;}
+</style>
+</head>
+<body>
+<div class="kbd">← → NAVEGAR</div>
+<div class="slides-wrapper">
+
+<!-- ==================== S1: CAPA ==================== -->
+<div class="slide active" id="slide-1" style="background:var(--black);position:relative;">
+  <div class="accent-top"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,0,50,.07) 0%,transparent 55%),repeating-linear-gradient(0deg,transparent,transparent 55px,rgba(255,255,255,.012) 55px,rgba(255,255,255,.012) 56px),repeating-linear-gradient(90deg,transparent,transparent 55px,rgba(255,255,255,.012) 55px,rgba(255,255,255,.012) 56px);"></div>
+  <div class="hdr" style="position:relative;z-index:2;">
+    <div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Santa Casa BH · Diagnóstico Estratégico</div></div>
+    <div class="hdr-n">01 / 12</div>
+  </div>
+  <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 52px;">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);letter-spacing:3px;text-transform:uppercase;margin-bottom:22px;display:flex;align-items:center;gap:12px;"><span style="display:block;width:30px;height:1px;background:var(--red);"></span>Diagnóstico Estratégico 2025</div>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(50px,7vw,92px);line-height:.92;color:var(--white);margin-bottom:22px;">Diagnóstico de<br>Carga <span style="color:var(--red);">Operacional</span><br>e Eficiência<br>Assistencial</h1>
+    <p style="font-size:15px;font-weight:300;color:var(--light);max-width:480px;line-height:1.65;margin-bottom:40px;">Análise do impacto dos setores corporativos sobre as gerências assistenciais — Santa Casa BH</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="padding:5px 12px;border:1px solid rgba(255,255,255,.14);font-size:10px;font-weight:500;color:var(--mid);letter-spacing:1px;text-transform:uppercase;">1.430 Atividades Mapeadas</div>
+      <div style="padding:5px 12px;border:1px solid rgba(255,0,50,.4);font-size:10px;font-weight:500;color:var(--red);letter-spacing:1px;text-transform:uppercase;">208 Atividades Únicas</div>
+      <div style="padding:5px 12px;border:1px solid rgba(255,255,255,.14);font-size:10px;font-weight:500;color:var(--mid);letter-spacing:1px;text-transform:uppercase;">8 Superintendências</div>
+      <div style="padding:5px 12px;border:1px solid rgba(255,255,255,.14);font-size:10px;font-weight:500;color:var(--mid);letter-spacing:1px;text-transform:uppercase;">8 Gerências Assistenciais</div>
+      <div style="padding:5px 12px;border:1px solid rgba(255,255,255,.14);font-size:10px;font-weight:500;color:var(--mid);letter-spacing:1px;text-transform:uppercase;">41.510 h/mês</div>
+    </div>
+  </div>
+  <div style="position:absolute;right:52px;bottom:70px;z-index:2;display:flex;flex-direction:column;gap:20px;text-align:right;">
+    <div><div style="font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--white);line-height:1;">41.510<span style="color:var(--red);font-size:24px;">h</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;">horas mensais impactadas</div></div>
+    <div><div style="font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--white);line-height:1;">95<span style="color:var(--red);font-size:24px;">%</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;">sem automação total</div></div>
+    <div><div style="font-family:'Bebas Neue',sans-serif;font-size:38px;color:var(--white);line-height:1;">70<span style="color:var(--red);font-size:24px;">%</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;">atividades delegáveis</div></div>
+  </div>
+  <div style="position:relative;z-index:2;padding:18px 52px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;flex-shrink:0;">
+    <div style="font-size:10px;color:#333;letter-spacing:1px;">CONFIDENCIAL · USO INTERNO</div>
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:#333;">DIAGNÓSTICO OPERACIONAL © 2025</div>
+  </div>
+</div>
+
+<!-- ==================== S2: METODOLOGIA ==================== -->
+<div class="slide" id="slide-2" style="background:var(--off);">
+  <div class="hdr light">
+    <div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:#888;">Capítulo 1 · O Problema</div></div>
+    <div class="hdr-n" style="color:#bbb;">02 / 12</div>
+  </div>
+  <div style="flex:1;padding:20px 52px 72px;display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start;">
+    <div>
+      <div class="chapter">Capítulo 1 de 4 · O Problema</div>
+      <div class="tag" style="color:var(--red);">Metodologia & Escopo</div>
+      <h2 class="t-dark">O <span>Tempo</span><br>Roubado<br>do Cuidado</h2>
+      <p class="body-txt" style="margin-bottom:16px;">Este estudo mapeia a totalidade das atividades administrativas e corporativas realizadas pelos gerentes assistenciais — quantificando o impacto direto sobre o tempo disponível para o cuidado ao paciente.</p>
+      <div class="sc-card"><div class="sc-num">1.430</div><div><div class="sc-lbl">Atividades Mapeadas</div><div class="sc-d">Total de registros · <strong style="color:var(--red);">208 atividades únicas</strong> (contagem distinta de valor)</div></div></div>
+      <div class="sc-card"><div class="sc-num">8</div><div><div class="sc-lbl">Superintendências Demandantes</div><div class="sc-d">Analisadas por volume, tempo e impacto</div></div></div>
+      <div class="sc-card"><div class="sc-num">5</div><div><div class="sc-lbl">Dimensões de Análise</div><div class="sc-d">Tempo, automação, valor, delegabilidade, periodicidade</div></div></div>
+    </div>
+    <div>
+      <div class="cb"><div class="cb-t">Premissa Central</div><p class="cb-p">Cada hora dedicada a processos corporativos por um gerente assistencial é uma hora <strong>não utilizada na supervisão clínica</strong>, no desenvolvimento de equipes e na melhoria do cuidado ao paciente.</p></div>
+      <div class="cb"><div class="cb-t">Critérios de Avaliação</div><p class="cb-p">As atividades foram classificadas por: <strong>periodicidade</strong>, <strong>tempo médio mensal</strong> (10 a 80h), <strong>nível de automatização</strong>, <strong>agregação de valor</strong> e <strong>exclusividade do gerente</strong>. A pontuação final reflete o peso operacional real sobre a gestão assistencial.</p></div>
+      <div style="background:var(--red);padding:18px 22px;"><p style="font-size:14px;font-weight:500;color:var(--white);line-height:1.6;"><strong>Pergunta-chave:</strong> Quantas horas mensais os gerentes assistenciais estão "pagando" à corporação — em vez de dedicar à excelência assistencial?</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S3: PANORAMA GERAL ==================== -->
+<div class="slide" id="slide-3" style="background:var(--dark);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Capítulo 2 · A Escala do Impacto</div></div><div class="hdr-n">03 / 12</div></div>
+  <div style="padding:10px 52px 0;flex-shrink:0;">
+    <div class="chapter">Capítulo 2 de 4 · A Escala do Impacto</div>
+    <div class="t-white">Panorama <span>Geral</span> do Impacto Corporativo</div>
+  </div>
+  <div style="flex:1;padding:12px 52px 72px;display:flex;flex-direction:column;gap:14px;">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+      <div class="kpi hl"><div class="kpi-lbl">Total h/Mês</div><div class="kpi-val">41.510<sub>h</sub></div><div class="kpi-d">Exigidas pelas Superintendências</div></div>
+      <div class="kpi"><div class="kpi-lbl">Maior Demandante</div><div class="kpi-val">11.700<sub>h</sub></div><div class="kpi-d">Sup. Suporte à Saúde</div></div>
+      <div class="kpi"><div class="kpi-lbl">Atividades Totais</div><div class="kpi-val">1.430</div><div class="kpi-d">Processos mapeados</div></div>
+      <div class="kpi"><div class="kpi-lbl">Sem Automação</div><div class="kpi-val">95<sub>%</sub></div><div class="kpi-d">Manual ou parcial</div></div>
+    </div>
+    <div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;font-weight:600;">Horas Mensais por Superintendência</div>
+    <div style="display:flex;flex-direction:column;gap:7px;flex:1;">
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Suporte à Saúde</div><div class="bar-trk"><div class="bar-fill" style="width:100%;background:var(--red);"></div></div><div class="bar-r">11.700h</div></div>
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Governança, Planejamento e Auditoria</div><div class="bar-trk"><div class="bar-fill" style="width:74.3%;background:#6b6b6b;"></div></div><div class="bar-r">8.690h</div></div>
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Gestão de Pessoas</div><div class="bar-trk"><div class="bar-fill" style="width:65.6%;background:#555;"></div></div><div class="bar-r">7.670h</div></div>
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Relações Institucionais</div><div class="bar-trk"><div class="bar-fill" style="width:34.3%;background:#434343;"></div></div><div class="bar-r">4.010h</div></div>
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Jurídica e Segurança Corporativa</div><div class="bar-trk"><div class="bar-fill" style="width:27.5%;background:#383838;"></div></div><div class="bar-r">3.220h</div></div>
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Financeira e de Controladoria</div><div class="bar-trk"><div class="bar-fill" style="width:25.8%;background:#303030;"></div></div><div class="bar-r">3.020h</div></div>
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Infraestrutura e Assist. Familiar</div><div class="bar-trk"><div class="bar-fill" style="width:21.5%;background:#282828;border:1px solid #3c3c3c;"></div></div><div class="bar-r">2.520h</div></div>
+      <div class="bar-row" style="grid-template-columns:260px 1fr 70px;"><div class="bar-lbl">Administração Educacional</div><div class="bar-trk"><div class="bar-fill" style="width:5.8%;background:#222;border:1px solid #363636;"></div></div><div class="bar-r">680h</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S4: UNIDADES SOB PRESSÃO ==================== -->
+<div class="slide" id="slide-4" style="background:var(--dark);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABPAF0DASIAAhEBAxEB/8QAHAAAAgIDAQEAAAAAAAAAAAAAAAcEBgIDBQEI/8QAORAAAgEDAgIHBQUIAwAAAAAAAQIDAAQFBhExQRIhUWFxgZEHEyKhsRQjMmLBFSQzQkNSctHC4fD/xAAaAQACAwEBAAAAAAAAAAAAAAAEBwADBgUI/8QANhEAAQEGBQIDBQcFAAAAAAAAAQIAAwQFESEGEjFBUROBB2FxFCIjkaEyQlJysdHwkqLB0uH/2gAMAwEAAhEDEQA/APjSNHkkWONGd2ICqo3JPYKYmmdAwrElxm2Z5D1/Z0bYL/kRxPh86w9lWET3b5u4TdiSlvvy5M36etMCgIiIIOVLOXA2CYd7DpmEenNmulJ0pyRvXYaUvvaDbYfFWyBYMbaINtuqJdz4nia9uMRirhejPjbSQd8K7/Spta7ieC3TpzzRxL2uwUfOg8yq6s1FQcIh3lLtISPIUZR6404+DvfewBmsZj92x6+gf7T+ndVcp1ZO807lbGWwuMpj5ElG2wuU3B5EdfEUospjp7HKyY/qmcMBGY/i94D+Ejbtrpw70qFFasgMa4dcy+J9ogiFOlnQGuVXFtjt8tmhVZNM6QyOZCzv+6Wh/quOth+Uc/HhVm0boiO3CX2ZjWSbiluetU/y7T3cKvI6hsKqfRVLIbQYX8OVP0piZpUA6I0J/MdvQX5I0av4vR2BsUG9mLqQcXuPj38uHyrfk9MYS/tmhfHwQtt8MkKBGXzHHwNdmiguoutas1USKWoc9BLhGTjKP531ZG6hxF1hck9ncjccY3A6nXkRXOp16twUOdxjQN0VuE3aCQ/yt2HuPOkxdQS21xJbzoUljYq6nkRXTcPuom+rIDGOGFyKL+Hd0v7J45SfMfUd2eOn7ZbPB2Vso293AoPjt1n13qdUXDzrdYm0uUIIkhRvUCubrjLNh9PzTxNtPIfdQnsY8/IAn0rmZSpdN29AmLh4CXCIJ+GhAPYC1P8ADcTW2szYyvjsSytcL1SzEbiM9gHM/T6Lm7urm7mM11PJNIeLOxJrUSSSSSSeJNb8dZXWQu0tbOFppX4KvLvPYO+uq7dpdCzecJ1P4+fxVVkkE+6gVoOABufPU/RtdvDLcTpBBG0krnoqqjck01dEaUiw8S3l6qyX7DxEI7B39p/8d+jdLW+DiE83RmvmHxSckHYv++dWOgoiIze6nRmtgvAyZfljY4Ve7J2T5/m/T1Yooqka11otmXx+JdXuOEk461j7h2n6fQd27Us0DbicTmElEOYiKVQbDcngDn+Fu3qbU+OwaFJG99dEbrAh6/EnkKqmAyuZ1VqSJJpmhsYT72SKL4V2HAE8TuduPfVI+/urkD45p5W27WZj9TTi0Xg1weIET7G6l+Odh28l8B/ui1oQ4RySy0lE2meLpmK1dwzs1IG/AUd67jSlbN3KW3tZxypkrS+giJe4Rlk6I33K7bE+R28qZNLb2vXSvkLG0U/FFGztt+Ygf8apha9QUbU+IYcmRPC8F6pp65hp2r2aX7Lc8rRHCXL7Mu7WxPMcSv6jzrf7ULHJ5GSwgsbOadEDs5RdwCdgNz5GltBLJBMk0LskiMGVlOxBHOnFovUEedx27lVvIgBMg5/mHcflV75BdL6iQ2OwtNHWIJYqQxjwpVbKRqUgg5b7in9Po1Nwvs/yVwyvkpEs4uagh3Pp1D18qYOFw+Pw9t7ixgCA/ic9bP4mp9FCvHy3mrMSSYUlsl96HRVf4lXV+w7AMUVhcTRW8DzzyJFEg3Z2OwApa6z1o98HsMSzR2x6pJuDSdw7B8zUdOlPDQNbP8RwcjcdSINVHRI1P7Dk6d7NM13rH+Li8TJ+Wa4U+qr/AL9O2l8oLMFUEknYAc63WFndX90ttZwPNK3BVHz7h300dG6PgxHRvL3oT32245rF4dp7/SjypEOmjJVzCTfG0eXy7IFq/dSOByfqd6BtGgNKfs1VyeRQfbGH3cZ/pA8z+b6VcqKK5y1lZqWe0olENKYVMNDCiR8ydyfM/wDBZsLmaK2t5LidwkUalnY8gONI7UGRfK5i5v33HvX+FT/Ko6gPTarf7TdRCVjhLN90U73Lg8SOCeXE/wDVUGj4V1lGY7smfEfESY6JEA4NUOzc8q0/t09SWKlYq/usZfR3lnKY5UPkRzBHMVFoooitiy3dPVuVh47NFC4I1BZmY72i2DwgX9nPDKB1mLZlPqQRWOR9o1miEY+xmlf+6YhFHkNyflS1qViTZDJQftFHa06YEoU7Hbt8uNDmGdi9G3DrxAnr1KXHVSCaDMUi3mbU9TRpmYzWXz9yqXDvJufu4IlPRB7l5n1NdvAaDyN4VlyR+xQcejxkby5efpTExGNxdhApxtrBEjqCHQblhy+LifWp1DqiiBRAo27l3h2h699qmz4vlm9ATTudSPk0HDYjH4i39zY26xg/iY9bP4nnU6isLiaG3haaeVIokG7O52AHjQhJUbsx3TlzCugh2AlCRoLABs6peu9XLYq+Nxcoa7PVLKp3EXcPzfTxrmav1y04eywrNHGep7ngzf49njx8KohJJ3J3Jo1xDfeWymxh4gJyqg5YqpNisfon/b5cgJJO5O5NeUUUeyaYoooqNGKKKKjRr97NdSiMrhb+TZCf3aRjwP8AYf09OymFPNDbxGWeWOKNeLuwUDzNfP46juKkXt7eXrBry6nuCvUDI5bb1oR5Chaqg0ZlSHxFfSyA9lfO+oU2Sa0twbHTbytszLzuvcbaBo8cpvZuHS/DGPPifL1pf5zO5PMy9O9uCyA7rEvUi+A/U9dcyirXbhDvRs3O8XTOc1S/XRH4U2Hfc9yWKKKKubMsUUUVGjf/2Q==" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Capítulo 2 · A Escala do Impacto</div></div><div class="hdr-n">04 / 12</div></div>
+  <div style="padding:10px 52px 0;flex-shrink:0;">
+    <div class="t-white">Unidades de Saúde <span>sob Pressão</span></div>
+  </div>
+  <div style="flex:1;padding:12px 52px 72px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+    <div>
+      <div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:8px;">Top 8 Gerências — h/mês absorvidas</div>
+      <div style="display:flex;flex-direction:column;">
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+          <div class="rank-n r">01</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência de Serviços de Diagnóstico e Tratamento</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:100%;background:var(--red);"></div></div></div>
+          <div><div class="rank-hrs">9.970</div><div class="rank-unit">h/mês</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+          <div class="rank-n r">02</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência de Cuidados Clínicos</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:76.4%;background:#a00020;"></div></div></div>
+          <div><div class="rank-hrs">7.620</div><div class="rank-unit">h/mês</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+          <div class="rank-n r">03</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência de Transplante</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:76.4%;background:#a00020;"></div></div></div>
+          <div><div class="rank-hrs">7.620</div><div class="rank-unit">h/mês</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+          <div class="rank-n">04</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência de Cuidados Oncológicos</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:56.6%;background:#6b6b6b;"></div></div></div>
+          <div><div class="rank-hrs">5.640</div><div class="rank-unit">h/mês</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+          <div class="rank-n">05</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência de Cuidados Cirúrgicos</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:52.8%;background:#555;"></div></div></div>
+          <div><div class="rank-hrs">5.260</div><div class="rank-unit">h/mês</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+          <div class="rank-n">06</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência Ambulatorial — CEM</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:22%;background:#444;"></div></div></div>
+          <div><div class="rank-hrs">2.190</div><div class="rank-unit">h/mês</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+          <div class="rank-n">07</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência de Suporte Clínico</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:18%;background:#3a3a3a;"></div></div></div>
+          <div><div class="rank-hrs">1.790</div><div class="rank-unit">h/mês</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px;gap:12px;align-items:center;padding:9px 0;">
+          <div class="rank-n">08</div>
+          <div><div style="font-size:11px;font-weight:600;color:var(--white);">Gerência de Alta Complexidade</div><div style="height:3px;background:rgba(255,255,255,.05);margin-top:5px;"><div style="height:100%;width:14%;background:#2e2e2e;"></div></div></div>
+          <div><div class="rank-hrs">1.420</div><div class="rank-unit">h/mês</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;font-weight:600;">Correlação: Horas vs Colaboradores Ativos</div>
+      <!-- correlation table -->
+      <div style="overflow:hidden;">
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:6px 10px;background:rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.08);">
+          <span style="font-size:8px;color:#555;letter-spacing:2px;text-transform:uppercase;">Gerência</span>
+          <span style="font-size:8px;color:#555;letter-spacing:2px;text-transform:uppercase;text-align:right;">h/mês</span>
+          <span style="font-size:8px;color:#555;letter-spacing:2px;text-transform:uppercase;text-align:right;">Colab.</span>
+          <span style="font-size:8px;color:#555;letter-spacing:2px;text-transform:uppercase;text-align:right;">h/colab</span>
+        </div>
+        <!-- Diagnóstico -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;">
+          <div style="font-size:10px;color:var(--white);font-weight:600;">Diagnóstico e Tratamento</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">9.970</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">412</div>
+          <div style="text-align:right;"><span style="background:#7a0020;color:#ffaaaa;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">24,2</span></div>
+        </div>
+        <!-- Cuidados Clínicos -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;">
+          <div style="font-size:10px;color:var(--white);font-weight:600;">Cuidados Clínicos</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">7.620</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">571</div>
+          <div style="text-align:right;"><span style="background:#2a2a2a;color:#aaa;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">13,3</span></div>
+        </div>
+        <!-- Transplante — ALARME -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;background:rgba(255,0,50,.08);">
+          <div style="font-size:10px;color:var(--white);font-weight:700;">Transplante ⚠</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">7.620</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">104</div>
+          <div style="text-align:right;"><span style="background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">73,3</span></div>
+        </div>
+        <!-- Oncológicos -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;">
+          <div style="font-size:10px;color:var(--white);font-weight:600;">Cuidados Oncológicos</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">5.640</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">232</div>
+          <div style="text-align:right;"><span style="background:#7a0020;color:#ffaaaa;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">24,3</span></div>
+        </div>
+        <!-- Cirúrgicos -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;">
+          <div style="font-size:10px;color:var(--white);font-weight:600;">Cuidados Cirúrgicos</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">5.260</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">288</div>
+          <div style="text-align:right;"><span style="background:#2a2a2a;color:#aaa;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">18,3</span></div>
+        </div>
+        <!-- Ambulatorial -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;">
+          <div style="font-size:10px;color:var(--white);font-weight:600;">Ambulatorial — CEM</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">2.190</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">135</div>
+          <div style="text-align:right;"><span style="background:#2a2a2a;color:#aaa;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">16,2</span></div>
+        </div>
+        <!-- Suporte Clínico -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;">
+          <div style="font-size:10px;color:var(--white);font-weight:600;">Suporte Clínico</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">1.790</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">62</div>
+          <div style="text-align:right;"><span style="background:#7a0020;color:#ffaaaa;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">28,9</span></div>
+        </div>
+        <!-- Alta Complexidade -->
+        <div style="display:grid;grid-template-columns:1fr 52px 60px 70px;gap:6px;padding:8px 10px;align-items:center;">
+          <div style="font-size:10px;color:var(--white);font-weight:600;">Alta Complexidade</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--white);text-align:right;">1.420</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--mid);text-align:right;">784</div>
+          <div style="text-align:right;"><span style="background:#14532d;color:#86efac;font-size:9px;font-weight:700;padding:2px 7px;border-radius:2px;">1,8</span></div>
+        </div>
+      </div>
+      <div class="insight"><div class="insight-t">⚠ Alarme — Transplante: 73,3 h/colab</div><p>Com apenas <strong>104 colaboradores</strong> e <strong>7.620h/mês</strong> de demanda corporativa, a Gerência de Transplante tem a maior razão hora por colaborador — <strong>5× acima da média</strong>. Equipe mínima sob carga máxima.</p></div>
+      <div class="insight"><div class="insight-t">Alta Complexidade — Paradoxo</div><p>784 colaboradores mas apenas 1,8 h/colab — a maior equipe da instituição é a menos sobrecarregada proporcionalmente, revelando que o problema não é de volume, mas de <strong>concentração de demanda</strong>.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S5: AUTOMATIZAÇÃO ==================== -->
+<div class="slide" id="slide-5" style="background:var(--black);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Capítulo 2 · A Escala do Impacto</div></div><div class="hdr-n">05 / 12</div></div>
+  <div style="padding:10px 52px 0;flex-shrink:0;">
+    <div class="t-white">O Abismo da <span>Automatização</span></div>
+  </div>
+  <div style="flex:1;padding:12px 52px 72px;display:grid;grid-template-columns:1fr 1fr;gap:36px;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;min-height:200px;">
+        <svg width="190" height="190" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#1c1c1c" stroke-width="34"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#6b6b6b" stroke-width="34" stroke-dasharray="175 264" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#ff0032" stroke-width="34" stroke-dasharray="169 270" stroke-dashoffset="-175" transform="rotate(-90 100 100)"/>
+          <circle cx="100" cy="100" r="70" fill="none" stroke="#22c55e" stroke-width="34" stroke-dasharray="18 426" stroke-dashoffset="-344" transform="rotate(-90 100 100)"/>
+        </svg>
+        <div style="position:absolute;text-align:center;pointer-events:none;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:44px;color:var(--white);line-height:1;">95%</div>
+          <div style="font-size:9px;color:var(--light);letter-spacing:1px;text-transform:uppercase;">sem automação total</div>
+        </div>
+      </div>
+      <div>
+        <div class="leg-row"><div class="leg-dot" style="background:#ff0032;"></div><div class="leg-txt">Sem automação (Manual)</div><div class="leg-pct">38,5%</div></div>
+        <div class="leg-row"><div class="leg-dot" style="background:#6b6b6b;"></div><div class="leg-txt">Parcialmente automatizado</div><div class="leg-pct">39,9%</div></div>
+        <div class="leg-row"><div class="leg-dot" style="background:#22c55e;"></div><div class="leg-txt">Totalmente automatizado</div><div class="leg-pct">4,2%</div></div>
+      </div>
+      <div class="insight"><div class="insight-t">Ponto Crítico</div><p>Apenas <strong>60 das 1.430 atividades</strong> são totalmente automatizadas. <strong>249 não tiveram o nível informado</strong>. As demais 1.121 exigem intervenção manual recorrente dos gerentes.</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="font-size:10px;color:#555;letter-spacing:2px;text-transform:uppercase;font-weight:600;">Volume por Nível de Automação</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:var(--mid);">Parcialmente Automatizado</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--white);">571 atividades</span></div><div style="height:7px;background:rgba(255,255,255,.07);"><div style="height:100%;width:100%;background:#6b6b6b;"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:var(--mid);">Sem Automação (Manual)</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--white);">550 atividades</span></div><div style="height:7px;background:rgba(255,255,255,.07);"><div style="height:100%;width:96.3%;background:#ff0032;"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:var(--mid);">Totalmente Automatizado</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--white);">60 atividades</span></div><div style="height:7px;background:rgba(255,255,255,.07);"><div style="height:100%;width:10.5%;background:#22c55e;"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:#666;">Não Informado</span><span style="font-family:'DM Mono',monospace;font-size:11px;color:#666;">249 atividades</span></div><div style="height:7px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.12);"><div style="height:100%;width:43.6%;background:repeating-linear-gradient(90deg,#333 0px,#333 4px,transparent 4px,transparent 8px);"></div></div></div>
+      </div>
+      <div class="insight"><div class="insight-t">Impacto Estimado</div><p>Com automação das atividades manuais críticas, estima-se recuperar <strong>15.000 a 20.000 horas/mês</strong> para o cuidado assistencial.</p></div>
+      <div class="insight"><div class="insight-t">Principal Gargalo</div><p>A ausência de integração entre sistemas força os gerentes a atuarem como <strong>elo manual de dados</strong> entre plataformas corporativas.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S6: VALOR AGREGADO ==================== -->
+<div class="slide" id="slide-6" style="background:var(--off);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:#888;">Capítulo 2 · A Escala do Impacto</div></div><div class="hdr-n" style="color:#bbb;">06 / 12</div></div>
+  <div style="padding:10px 52px 0;flex-shrink:0;"><div class="tag" style="color:var(--red);">Matriz de Valor Agregado</div><h2 class="t-dark">Valor <span>Real</span> vs.<br>Desperdício Oculto</h2></div>
+  <div style="flex:1;padding:12px 52px 72px;display:grid;grid-template-columns:1fr 1fr;gap:36px;align-items:start;">
+    <div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+        <svg width="210" height="210" viewBox="0 0 220 220">
+          <circle cx="110" cy="110" r="80" fill="none" stroke="#e8e8e8" stroke-width="36"/>
+          <circle cx="110" cy="110" r="80" fill="none" stroke="#22c55e" stroke-width="36" stroke-dasharray="270 233" stroke-dashoffset="0" transform="rotate(-90 110 110)"/>
+          <circle cx="110" cy="110" r="80" fill="none" stroke="#f59e0b" stroke-width="36" stroke-dasharray="82 420" stroke-dashoffset="-270" transform="rotate(-90 110 110)"/>
+          <circle cx="110" cy="110" r="80" fill="none" stroke="#ff0032" stroke-width="36" stroke-dasharray="52 450" stroke-dashoffset="-352" transform="rotate(-90 110 110)"/>
+        </svg>
+      </div>
+      <div class="vc" style="border-left-color:#22c55e;margin-top:12px;"><div class="vc-pct" style="color:#22c55e;">53,7%</div><div><div class="vc-lbl">Agrega Valor</div><div class="vc-sub">768 atividades — manter e otimizar</div></div></div>
+      <div class="vc" style="border-left-color:#f59e0b;"><div class="vc-pct" style="color:#f59e0b;">16,4%</div><div><div class="vc-lbl">Necessário, Sem Valor</div><div class="vc-sub">234 atividades — simplificar</div></div></div>
+      <div class="vc" style="border-left-color:var(--red);"><div class="vc-pct" style="color:var(--red);">10,4%</div><div><div class="vc-lbl">Redirecionável</div><div class="vc-sub">149 atividades — eliminar ou delegar</div></div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <p class="body-txt" style="margin-top:8px;">Quase <strong style="color:var(--dark);">1 em cada 4 atividades</strong> realizadas pelos gerentes não contribui para os objetivos estratégicos — seja por ser delegável, seja por poder ser eliminada com redesenho de processos.</p>
+      <div class="ac"><div class="ac-icon">→</div><div><div class="ac-t">Ação Imediata</div><div class="ac-d">Transferir as 149 atividades redirecionáveis para coordenadores e apoio administrativo nos próximos 30 dias.</div></div></div>
+      <div class="ac"><div class="ac-icon">⚡</div><div><div class="ac-t">Médio Prazo</div><div class="ac-d">As 234 atividades necessárias mas sem valor devem ter processos revisados e automatizados.</div></div></div>
+      <div class="ac"><div class="ac-icon">✓</div><div><div class="ac-t">Meta de Eficiência</div><div class="ac-d">Elevar atividades de alto valor de 53,7% para acima de 75% do portfólio total dos gerentes em 12 meses.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S7: TOP 10 RANKING AVALIAÇÃO ==================== -->
+<div class="slide" id="slide-7" style="background:var(--black);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Capítulo 3 · A Voz dos Gerentes</div></div><div class="hdr-n">07 / 12</div></div>
+  <div style="padding:8px 52px 0;flex-shrink:0;">
+    <div class="chapter">Capítulo 3 de 4 · A Voz dos Gerentes</div>
+    <div class="t-white">Top 10 do Ranking na <span>Avaliação dos Gerentes</span></div>
+    <p style="font-size:11px;color:#555;margin-top:2px;">Atividades presentes em todas as 8 gerências · Ordenadas por Pontuação Média de Impacto</p>
+  </div>
+  <div style="flex:1;padding:10px 52px 72px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+    <!-- TABLE -->
+    <div style="overflow:hidden;">
+      <div class="tbl-hdr" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <span>#</span><span>Atividade Macro / Área</span><span style="text-align:center;">Period.</span><span style="text-align:center;">Pont.</span><span style="text-align:center;">M.Alto</span><span style="text-align:center;">Auto0</span><span style="text-align:center;">Redir.</span><span style="text-align:center;">Rest.</span>
+      </div>
+      <!-- R1 -->
+      <div class="tbl-row hi" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--red);">1</div>
+        <div><div class="cell-name">ENTREGA DE NOTAS CONFORME PRS</div><div class="cell-area">Ger. de Controladoria · Sup. Financeira</div></div>
+        <div class="cell-per" style="text-align:center;">MENSAL</div>
+        <div style="text-align:center;"><span class="badge r">29</span></div>
+        <div class="cell-num">3</div><div class="cell-num hi">5</div><div class="cell-num">3</div><div class="cell-num">1</div>
+      </div>
+      <!-- R2 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">2</div>
+        <div><div class="cell-name">APROVAÇÃO DE ORÇAMENTOS</div><div class="cell-area">Comunicação e Marketing · Sup. Rel. Institucionais</div></div>
+        <div class="cell-per" style="text-align:center;">DIÁRIO</div>
+        <div style="text-align:center;"><span class="badge r2">28</span></div>
+        <div class="cell-num">1</div><div class="cell-num hi">5</div><div class="cell-num">0</div><div class="cell-num">6</div>
+      </div>
+      <!-- R3 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">3</div>
+        <div><div class="cell-name">MOVIMENTAÇÃO DOS BENS PATRIMONIAIS</div><div class="cell-area">Gestão de Patrimônio · Sup. Jurídica</div></div>
+        <div class="cell-per" style="text-align:center;">DIÁRIO</div>
+        <div style="text-align:center;"><span class="badge r2">27</span></div>
+        <div class="cell-num">0</div><div class="cell-num hi">6</div><div class="cell-num hi">4</div><div class="cell-num">1</div>
+      </div>
+      <!-- R4 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">4</div>
+        <div><div class="cell-name">ANÁLISE ORÇAMENTÁRIA</div><div class="cell-area">Planejamento Projetos e Orçamentos · Sup. Gov.</div></div>
+        <div class="cell-per" style="text-align:center;">MENSAL</div>
+        <div style="text-align:center;"><span class="badge r2">27</span></div>
+        <div class="cell-num">1</div><div class="cell-num">0</div><div class="cell-num">0</div><div class="cell-num">3</div>
+      </div>
+      <!-- R5 -->
+      <div class="tbl-row hi" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">5</div>
+        <div><div class="cell-name">ELABORAÇÃO DO ORÇAMENTO</div><div class="cell-area">Planejamento Projetos e Orçamentos · Sup. Gov.</div></div>
+        <div class="cell-per" style="text-align:center;">ANUAL</div>
+        <div style="text-align:center;"><span class="badge r2">26</span></div>
+        <div class="cell-num hi">4</div><div class="cell-num">1</div><div class="cell-num">0</div><div class="cell-num">5</div>
+      </div>
+      <!-- R6 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">6</div>
+        <div><div class="cell-name">ANÁLISE DOS INDICADORES</div><div class="cell-area">Planejamento Projetos e Orçamentos · Sup. Gov.</div></div>
+        <div class="cell-per" style="text-align:center;">MENSAL</div>
+        <div style="text-align:center;"><span class="badge r2">26</span></div>
+        <div class="cell-num">3</div><div class="cell-num">3</div><div class="cell-num">0</div><div class="cell-num">1</div>
+      </div>
+      <!-- R7 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">7</div>
+        <div><div class="cell-name">REUNIÕES DE RESULTADOS (PLANOS DA GESTÃO)</div><div class="cell-area">Planejamento Projetos e Orçamentos · Sup. Gov.</div></div>
+        <div class="cell-per" style="text-align:center;">TRIM.</div>
+        <div style="text-align:center;"><span class="badge r2">26</span></div>
+        <div class="cell-num">3</div><div class="cell-num">3</div><div class="cell-num">0</div><div class="cell-num">4</div>
+      </div>
+      <!-- R8 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">8</div>
+        <div><div class="cell-name">ACOMP. E ANÁLISE DAS PRÉVIAS DO FECHAMENTO</div><div class="cell-area">Ger. de Controladoria · Sup. Financeira</div></div>
+        <div class="cell-per" style="text-align:center;">MENSAL</div>
+        <div style="text-align:center;"><span class="badge r2">26</span></div>
+        <div class="cell-num">3</div><div class="cell-num">3</div><div class="cell-num">0</div><div class="cell-num">3</div>
+      </div>
+      <!-- R9 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">9</div>
+        <div><div class="cell-name">ACOMPANHAMENTO E ANÁLISE DO EBITDA</div><div class="cell-area">Ger. de Controladoria · Sup. Financeira</div></div>
+        <div class="cell-per" style="text-align:center;">MENSAL</div>
+        <div style="text-align:center;"><span class="badge r2">26</span></div>
+        <div class="cell-num">3</div><div class="cell-num">3</div><div class="cell-num">0</div><div class="cell-num">5</div>
+      </div>
+      <!-- R10 -->
+      <div class="tbl-row" style="grid-template-columns:24px 1fr 44px 50px 40px 36px 36px 36px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#777;">10</div>
+        <div><div class="cell-name">BAIXA DOS BENS PATRIMONIAIS</div><div class="cell-area">Gestão de Patrimônio · Sup. Jurídica</div></div>
+        <div class="cell-per" style="text-align:center;">DIÁRIO</div>
+        <div style="text-align:center;"><span class="badge r2">26</span></div>
+        <div class="cell-num">0</div><div class="cell-num hi">6</div><div class="cell-num hi">4</div><div class="cell-num">1</div>
+      </div>
+    </div>
+    <!-- LEGENDA + INSIGHTS -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:14px;">
+        <div style="font-size:9px;color:#555;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:8px;">Legenda das Colunas</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--mid);">
+          <div><span style="color:var(--white);font-weight:600;">Pont.</span> — Pontuação média de impacto (avaliada pelos 8 gerentes)</div>
+          <div><span style="color:var(--white);font-weight:600;">M.Alto</span> — Qtd. que avaliou como carga MUITO ALTA (80h/mês)</div>
+          <div><span style="color:var(--white);font-weight:600;">Auto0</span> — Qtd. que avaliou sem nenhuma automatização</div>
+          <div><span style="color:var(--white);font-weight:600;">Redir.</span> — Qtd. que avaliou como redirecionável / sem valor</div>
+          <div><span style="color:var(--white);font-weight:600;">Rest.</span> — Qtd. que avaliou como restrita ao gerente</div>
+        </div>
+      </div>
+      <div class="insight"><div class="insight-t">⚠ Destaque — Pontuação Máxima</div><p><strong>Entrega de Notas Conforme PRS</strong> lidera com pontuação 29 — a mais alta do ranking. Processo financeiro diário com alto grau de manualidade (<strong>5 gerentes sem automação</strong>), consumindo tempo crítico de gestão assistencial.</p></div>
+      <div class="insight"><div class="insight-t">Padrão Identificado</div><p>Das 10 atividades mais impactantes, <strong>4 pertencem à Sup. Governança/Auditoria</strong> e <strong>3 à Sup. Financeira</strong> — revelando onde o esforço de automação e redesenho deve ser concentrado.</p></div>
+      <div class="insight"><div class="insight-t">Bens Patrimoniais — Anomalia</div><p>Movimentação e Baixa de Bens Patrimoniais aparecem no top 10 com <strong>6 gerentes sem automação</strong> e <strong>4 classificando como redirecionável</strong> — atividade de custódia que não deveria estar nas mãos da gestão assistencial.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S8: TOP 3 POR SUPERINTENDÊNCIA ==================== -->
+<div class="slide" id="slide-8" style="background:var(--dark);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Capítulo 3 · A Voz dos Gerentes</div></div><div class="hdr-n">08 / 12</div></div>
+  <div style="padding:8px 52px 0;flex-shrink:0;">
+    <div class="t-white">Top 3 por <span>Superintendência</span> — Avaliação dos Gerentes</div>
+    <p style="font-size:11px;color:#555;margin-top:2px;">As atividades mais impactantes na percepção direta dos gestores assistenciais, por área demandante</p>
+  </div>
+  <div style="flex:1;padding:10px 52px 72px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:start;">
+    <!-- COL 1 -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="sup-block">
+        <div class="sup-name">Sup. Financeira e Controladoria</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Entrega de Notas Conforme PRS</div><div class="sup-area">Ger. Controladoria</div></div><div><span class="badge r" style="font-size:8px;">29</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Acomp. e Análise do EBITDA</div><div class="sup-area">Ger. Controladoria</div></div><div><span class="badge r2" style="font-size:8px;">26</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Prévias do Fechamento Mensal + KPIH</div><div class="sup-area">Ger. Controladoria</div></div><div><span class="badge r2" style="font-size:8px;">26</span></div></div>
+      </div>
+      <div class="sup-block">
+        <div class="sup-name">Sup. Relações Institucionais</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Aprovação de Orçamentos</div><div class="sup-area">Comunicação e Marketing</div></div><div><span class="badge r2" style="font-size:8px;">28</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Apoio Organização de Fotos e Conteúdos</div><div class="sup-area">Comunicação e Marketing</div></div><div><span class="badge r2" style="font-size:8px;">24</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Indicação de Pacientes e Fontes</div><div class="sup-area">Comunicação e Marketing</div></div><div><span class="badge r2" style="font-size:8px;">23</span></div></div>
+      </div>
+    </div>
+    <!-- COL 2 -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="sup-block">
+        <div class="sup-name">Sup. Jurídica e Seg. Corporativa</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Movimentação dos Bens Patrimoniais</div><div class="sup-area">Gestão de Patrimônio</div></div><div><span class="badge r2" style="font-size:8px;">27</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Baixa dos Bens Patrimoniais</div><div class="sup-area">Gestão de Patrimônio</div></div><div><span class="badge r2" style="font-size:8px;">26</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Identificação dos Bens Patrimoniais</div><div class="sup-area">Gestão de Patrimônio</div></div><div><span class="badge r2" style="font-size:8px;">26</span></div></div>
+      </div>
+      <div class="sup-block">
+        <div class="sup-name">Sup. Governança, Plan. e Auditoria</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Análise Orçamentária</div><div class="sup-area">Planejamento e Orçamentos</div></div><div><span class="badge r2" style="font-size:8px;">27</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Elaboração do Orçamento</div><div class="sup-area">Planejamento e Orçamentos</div></div><div><span class="badge r2" style="font-size:8px;">26</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Análise dos Indicadores</div><div class="sup-area">Planejamento e Orçamentos</div></div><div><span class="badge r2" style="font-size:8px;">26</span></div></div>
+      </div>
+    </div>
+    <!-- COL 3 -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="sup-block">
+        <div class="sup-name">Sup. Gestão de Pessoas</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Gestão do Ponto — Tratativa do Ponto</div><div class="sup-area">Administração de Pessoal</div></div><div><span class="badge r2" style="font-size:8px;">25</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Gestão de EPIs</div><div class="sup-area">Segurança do Trabalho</div></div><div><span class="badge r2" style="font-size:8px;">25</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Controle do Periódico</div><div class="sup-area">Medicina do Trabalho</div></div><div><span class="badge y" style="font-size:8px;">22</span></div></div>
+      </div>
+      <div class="sup-block">
+        <div class="sup-name">Sup. Suporte à Saúde</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Gestão do Orçamento de Hotelaria</div><div class="sup-area">Hotelaria</div></div><div><span class="badge r2" style="font-size:8px;">24</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Higienização Terminal de Leitos</div><div class="sup-area">Hotelaria</div></div><div><span class="badge r2" style="font-size:8px;">24</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Gestão do Enxoval Estéril Descartável</div><div class="sup-area">Suprimentos</div></div><div><span class="badge r2" style="font-size:8px;">24</span></div></div>
+      </div>
+    </div>
+    <!-- COL 4 -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="sup-block">
+        <div class="sup-name">Sup. Infraestrutura e Assist. Familiar</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Gestão de Contratos</div><div class="sup-area">Ger. Contratos e Negociações</div></div><div><span class="badge y" style="font-size:8px;">22</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Negociações Estratégicas</div><div class="sup-area">Ger. Contratos e Negociações</div></div><div><span class="badge y" style="font-size:8px;">20</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Compra de Equipamentos</div><div class="sup-area">Ger. Engenharia Clínica</div></div><div><span class="badge y" style="font-size:8px;">19</span></div></div>
+      </div>
+      <div class="sup-block">
+        <div class="sup-name">Sup. Administração Educacional</div>
+        <div class="sup-row"><div class="sup-rank">1</div><div><div class="sup-activity">Preceptoria de Residência Médica</div><div class="sup-area">Faculdade</div></div><div><span class="badge y" style="font-size:8px;">22</span></div></div>
+        <div class="sup-row"><div class="sup-rank">2</div><div><div class="sup-activity">Vagas de Estágio com Gerentes</div><div class="sup-area">Faculdade</div></div><div><span class="badge g" style="font-size:8px;">19</span></div></div>
+        <div class="sup-row"><div class="sup-rank">3</div><div><div class="sup-activity">Treinamento Introdutório dos Residentes</div><div class="sup-area">Faculdade</div></div><div><span class="badge g" style="font-size:8px;">17</span></div></div>
+      </div>
+      <!-- insight box -->
+      <div class="insight" style="margin-top:4px;">
+        <div class="insight-t">Padrão Crítico</div>
+        <p>Sup. Jurídica domina com <strong>3 atividades de Bens Patrimoniais</strong> no top — todas diárias, manuais e redirecionáveis. Sup. Governança concentra atividades orçamentárias de altíssima carga.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S9: TOP 10 ATIVIDADES MAIS OFENSIVAS ==================== -->
+<div class="slide" id="slide-9" style="background:var(--black);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Capítulo 3 · A Voz dos Gerentes</div></div><div class="hdr-n">09 / 12</div></div>
+  <div style="padding:8px 52px 0;flex-shrink:0;">
+    <div class="tag">Score Composto: Carga Horária × % Sem Automação × Redirecionável</div>
+    <div class="t-white">Top 10 Atividades Macro <span>Mais Ofensivas</span></div>
+  </div>
+  <div style="flex:1;padding:10px 52px 72px;display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;">
+    <div style="overflow:hidden;">
+      <div class="tbl-hdr" style="grid-template-columns:28px 1fr 58px 52px;">
+        <span>#</span><span>Atividade Macro / Superintendência</span><span style="text-align:right;">h/mês</span><span style="text-align:center;">% Manual</span>
+      </div>
+      <div class="tbl-row hi" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--red);">1</div>
+        <div><div class="cell-name">PRESTAÇÃO DE CONTAS FOTOGRÁFICA DE EQUIPAMENTOS E INVENTÁRIO</div><div class="cell-area">Sup. Relações Institucionais</div></div>
+        <div class="cell-num" style="text-align:right;">330h</div><div style="text-align:center;"><span class="badge r">100%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">2</div>
+        <div><div class="cell-name">CRIAÇÃO E REVISÃO DE DOCUMENTOS</div><div class="cell-area">Sup. Governança, Planejamento e Auditoria</div></div>
+        <div class="cell-num" style="text-align:right;">490h</div><div style="text-align:center;"><span class="badge r2">87,5%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">3</div>
+        <div><div class="cell-name">ELABORAÇÃO DO ORÇAMENTO</div><div class="cell-area">Sup. Governança, Planejamento e Auditoria</div></div>
+        <div class="cell-num" style="text-align:right;">450h</div><div style="text-align:center;"><span class="badge r">100%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">4</div>
+        <div><div class="cell-name">ELABORAÇÃO DE CONTRATOS</div><div class="cell-area">Sup. Jurídica e Segurança Corporativa</div></div>
+        <div class="cell-num" style="text-align:right;">400h</div><div style="text-align:center;"><span class="badge r2">87,5%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">5</div>
+        <div><div class="cell-name">ENTREGA DE NOTAS CONFORME PRS</div><div class="cell-area">Sup. Financeira e de Controladoria</div></div>
+        <div class="cell-num" style="text-align:right;">340h</div><div style="text-align:center;"><span class="badge r2">87,5%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">6</div>
+        <div><div class="cell-name">GESTÃO DO PONTO — TRATATIVA DO PONTO</div><div class="cell-area">Sup. Gestão de Pessoas</div></div>
+        <div class="cell-num" style="text-align:right;">450h</div><div style="text-align:center;"><span class="badge r2">87,5%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">7</div>
+        <div><div class="cell-name">KPIH — INPUTS DE PRODUÇÃO E ESTATÍSTICA</div><div class="cell-area">Sup. Financeira e de Controladoria</div></div>
+        <div class="cell-num" style="text-align:right;">350h</div><div style="text-align:center;"><span class="badge r">100%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">8</div>
+        <div><div class="cell-name">ANÁLISE DOS INDICADORES</div><div class="cell-area">Sup. Suporte à Saúde</div></div>
+        <div class="cell-num" style="text-align:right;">380h</div><div style="text-align:center;"><span class="badge r">100%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">9</div>
+        <div><div class="cell-name">GESTÃO DE CONTRATOS</div><div class="cell-area">Sup. Infraestrutura e Assist. Familiar</div></div>
+        <div class="cell-num" style="text-align:right;">370h</div><div style="text-align:center;"><span class="badge r2">87,5%</span></div>
+      </div>
+      <div class="tbl-row" style="grid-template-columns:28px 1fr 58px 52px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#777;">10</div>
+        <div><div class="cell-name">ACOMPANHAMENTO DOS TEMPOS DE ESPERA — FARMÁCIA</div><div class="cell-area">Sup. Suporte à Saúde</div></div>
+        <div class="cell-num" style="text-align:right;">270h</div><div style="text-align:center;"><span class="badge r">100%</span></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;gap:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:16px;">
+        <div><div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--white);line-height:1;">3.830<span style="font-size:22px;color:var(--red);">h</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;margin-top:2px;">Top 10 · h/mês</div></div>
+        <div style="width:1px;background:rgba(255,255,255,.07);"></div>
+        <div><div style="font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--white);line-height:1;">92<span style="font-size:22px;color:var(--red);">%</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;margin-top:2px;">Média sem auto. total</div></div>
+      </div>
+      <div class="insight"><div class="insight-t">⚠ Crítico — Prestação de Contas Fotográfica</div><p><strong>100% manual</strong>, presente em todas as gerências, com 3 classificações como redirecionável. Processo burocrático de custódia pública que <strong>não deveria estar nas mãos da gestão assistencial</strong>.</p></div>
+      <div class="insight"><div class="insight-t">Convergência dos Rankings</div><p><strong>Entrega de Notas PRS</strong> aparece nos dois rankings — top 10 da avaliação (pont. 29) e top 10 ofensivas (340h/mês, 87,5% manual). Confirma que é a prioridade absoluta de automação.</p></div>
+      <div class="insight"><div class="insight-t">Top Ofensoras por Superintendência</div>
+        <p style="margin-top:6px;"><strong style="color:var(--white);">Governança:</strong> Criação e Revisão de Documentos &nbsp;|&nbsp; <strong style="color:var(--white);">Gestão Pessoas:</strong> Gestão do Ponto &nbsp;|&nbsp; <strong style="color:var(--white);">Financeira:</strong> Fechamento Mensal / KPIH &nbsp;|&nbsp; <strong style="color:var(--white);">Jurídica:</strong> Contratos</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S10: DESCENTRALIZAÇÃO ==================== -->
+<div class="slide" id="slide-10" style="background:var(--off);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:#888;">Capítulo 3 · A Voz dos Gerentes</div></div><div class="hdr-n" style="color:#bbb;">10 / 12</div></div>
+  <div style="padding:8px 52px 0;flex-shrink:0;"><div class="tag" style="color:var(--red);">Delegabilidade e Descentralização</div><h2 class="t-dark">82% das Tarefas<br>Não Precisam <span>do Gerente</span></h2></div>
+  <div style="flex:1;padding:10px 52px 72px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+    <div>
+      <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px;">
+        <svg width="160" height="96" viewBox="0 0 200 120">
+          <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#e8e8e8" stroke-width="18" stroke-linecap="round"/>
+          <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#ff0032" stroke-width="18" stroke-linecap="round" stroke-dasharray="211 251"/>
+        </svg>
+        <div><div class="gauge-big"><span>70,5%</span></div><div style="font-size:10px;color:var(--light);text-transform:uppercase;letter-spacing:2px;">não restritas ao gerente</div></div>
+      </div>
+      <p class="body-txt" style="margin-bottom:16px;">O dado de que <strong style="color:var(--dark);">70,5% das atividades não são restritas ao gerente</strong> representa a maior oportunidade de ganho imediato — sem necessidade de investimento tecnológico, apenas com <strong style="color:var(--dark);">revisão organizacional</strong>.</p>
+      <div style="background:var(--dark);padding:16px;margin-bottom:10px;"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Potencial de Recuperação</div><p style="font-size:13px;color:var(--mid);line-height:1.6;">Delegando sistematicamente as atividades não restritas, os gerentes podem recuperar entre <strong style="color:var(--white);">20 e 35 horas mensais</strong> para foco estratégico e assistencial.</p></div>
+    </div>
+    <div>
+      <div style="font-size:10px;color:#888;letter-spacing:2px;text-transform:uppercase;font-weight:600;margin-bottom:10px;">Modelos de Delegação</div>
+      <div style="background:var(--white);border:1px solid #e8e8e8;overflow:hidden;margin-bottom:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 60px;background:var(--dark);padding:8px 14px;gap:10px;">
+          <span style="font-size:8px;color:var(--light);letter-spacing:2px;text-transform:uppercase;">Categoria</span>
+          <span style="font-size:8px;color:var(--light);letter-spacing:2px;text-transform:uppercase;">Perfil Sugerido</span>
+          <span style="font-size:8px;color:var(--light);letter-spacing:2px;text-transform:uppercase;">Risco</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 60px;padding:10px 14px;gap:10px;border-bottom:1px solid #f0f0f0;align-items:center;"><div style="font-size:11px;color:var(--dark);font-weight:500;">Relatórios de rotina</div><div style="font-size:11px;color:#777;">Assistente Administrativo</div><div><span class="badge g">Baixo</span></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 60px;padding:10px 14px;gap:10px;border-bottom:1px solid #f0f0f0;align-items:center;"><div style="font-size:11px;color:var(--dark);font-weight:500;">Controle de escalas</div><div style="font-size:11px;color:#777;">Coordenador Operacional</div><div><span class="badge g">Baixo</span></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 60px;padding:10px 14px;gap:10px;border-bottom:1px solid #f0f0f0;align-items:center;"><div style="font-size:11px;color:var(--dark);font-weight:500;">Lançamentos em sistemas</div><div style="font-size:11px;color:#777;">Auxiliar Administrativo</div><div><span class="badge g">Baixo</span></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 60px;padding:10px 14px;gap:10px;border-bottom:1px solid #f0f0f0;align-items:center;"><div style="font-size:11px;color:var(--dark);font-weight:500;">Comunicados corporativos</div><div style="font-size:11px;color:#777;">Coordenador Sênior</div><div><span class="badge y">Médio</span></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 60px;padding:10px 14px;gap:10px;align-items:center;"><div style="font-size:11px;color:var(--dark);font-weight:500;">Análise de dados sensíveis</div><div style="font-size:11px;color:#777;">Permanece com Gerente</div><div><span class="badge r">Alto</span></div></div>
+      </div>
+      <div class="insight light"><div class="insight-t">Ação Estrutural</div><p>Redesenhar as descrições de cargo de coordenação para absorver as <strong>1.008 atividades delegáveis</strong> identificadas no mapeamento. Publicar matriz RACI por superintendência.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S11: PLANO DE AÇÃO ==================== -->
+<div class="slide" id="slide-11" style="background:var(--black);">
+  <div class="hdr"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Capítulo 4 · A Resposta</div></div><div class="hdr-n">11 / 12</div></div>
+  <div style="padding:8px 52px 0;flex-shrink:0;">
+    <div class="chapter">Capítulo 4 de 4 · A Resposta</div>
+    <div class="t-white">Plano de Ação e <span>Recomendações</span></div>
+  </div>
+  <div style="flex:1;padding:10px 52px 14px;display:flex;flex-direction:column;gap:12px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;flex:1;">
+      <div>
+        <div class="plan-phase">Fase 01 · Imediato (0–30 dias)</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white);margin-bottom:12px;">Eliminação e Delegação</div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Transferir as <strong>149 atividades redirecionáveis</strong> para coordenadores e equipe de apoio administrativo</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Publicar <strong>matriz RACI</strong> por superintendência com escopo claro de responsabilidades</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Priorizar automação de <strong>Entrega de Notas PRS</strong> e <strong>Gestão de Bens Patrimoniais</strong> — top ofensoras convergentes</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Estabelecer <strong>SLAs mínimos</strong> para resposta corporativa às gerências assistenciais</div></div>
+      </div>
+      <div>
+        <div class="plan-phase">Fase 02 · Curto Prazo (30–90 dias)</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white);margin-bottom:12px;">Automação Crítica</div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Automatizar as <strong>550 atividades totalmente manuais</strong>, priorizando as de maior carga horária (80h/mês)</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Integrar sistemas corporativos com plataformas assistenciais para eliminar <strong>retrabalho de inserção de dados</strong></div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Implementar <strong>dashboards em tempo real</strong> para substituir relatórios manuais periódicos</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Revisar os <strong>571 processos parcialmente automatizados</strong> para atingir automação completa</div></div>
+      </div>
+      <div>
+        <div class="plan-phase">Fase 03 · Médio Prazo (90–180 dias)</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--white);margin-bottom:12px;">Transformação Estrutural</div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Redesenhar <strong>perfis de cargos gerenciais</strong> com foco em gestão estratégica e qualidade assistencial</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Padronizar <strong>SLAs corporativos</strong> com indicadores de performance por superintendência</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Implementar <strong>governo de processos</strong> com comitê multidisciplinar para revisão contínua</div></div>
+        <div class="plan-item"><div class="plan-dot"></div><div class="plan-txt">Atingir <strong>75%+ atividades de alto valor</strong> no portfólio dos gerentes assistenciais</div></div>
+      </div>
+    </div>
+    <div class="tl">
+      <div class="tl-b"><div class="tl-p">Mês 01</div><div class="tl-a">Delegação de 149 atividades + Publicação RACI + Início automação PRS/Patrimônio</div></div>
+      <div class="tl-b"><div class="tl-p">Mês 01–03</div><div class="tl-a">Automação das 550 atividades manuais críticas + Integração de sistemas</div></div>
+      <div class="tl-b"><div class="tl-p">Mês 03–06</div><div class="tl-a">Redesenho de cargos + SLAs corporativos + Governo de processos contínuo</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== S12: CONCLUSÃO ==================== -->
+<div class="slide" id="slide-12" style="background:var(--black);position:relative;">
+  <div class="accent-top"></div>
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse 55% 55% at 78% 50%,rgba(255,0,50,.11) 0%,transparent 70%),repeating-linear-gradient(-45deg,transparent,transparent 28px,rgba(255,255,255,.007) 28px,rgba(255,255,255,.007) 29px);"></div>
+  <div class="hdr" style="position:relative;z-index:2;"><div class="logo"><div class="logo-bar"></div><img src="data:image/png;base64,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" style="height:24px;width:auto;object-fit:contain;margin-right:2px;" alt="SCBH Logo"><div class="logo-txt" style="color:var(--light);">Santa Casa BH · Conclusão</div></div><div class="hdr-n">12 / 12</div></div>
+  <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 52px;gap:28px;">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--red);letter-spacing:4px;text-transform:uppercase;display:flex;align-items:center;gap:12px;"><span style="display:block;width:36px;height:1px;background:var(--red);"></span>Diagnóstico Concluído · Ação Requerida</div>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(44px,6vw,84px);color:var(--white);line-height:.92;max-width:680px;">Otimizar o<br>Processo para<br>Priorizar <span style="color:var(--red);">a Vida</span></h1>
+    <p style="font-size:15px;font-weight:300;color:var(--light);max-width:500px;line-height:1.7;">Cada hora recuperada dos processos corporativos é uma hora devolvida ao cuidado do paciente. A Santa Casa BH tem os dados — agora é o momento de agir.</p>
+    <div style="display:flex;gap:36px;align-items:center;">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--white);line-height:1;">41.510<span style="color:var(--red);font-size:20px;">h</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;">horas mensais impactadas</div></div>
+      <div style="width:1px;height:44px;background:rgba(255,255,255,.08);"></div>
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--white);line-height:1;">149<span style="color:var(--red);font-size:20px;">+</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;">atividades p/ eliminar já</div></div>
+      <div style="width:1px;height:44px;background:rgba(255,255,255,.08);"></div>
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--white);line-height:1;">95<span style="color:var(--red);font-size:20px;">%</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;">sem automação total</div></div>
+      <div style="width:1px;height:44px;background:rgba(255,255,255,.08);"></div>
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--white);line-height:1;">75<span style="color:var(--red);font-size:20px;">%</span></div><div style="font-size:9px;color:#444;letter-spacing:2px;text-transform:uppercase;">meta valor agregado</div></div>
+    </div>
+  </div>
+  <div style="position:relative;z-index:2;padding:18px 52px;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--white);letter-spacing:2px;">SANTA <span style="color:var(--red);">CASA</span> BH</div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:#333;">DIAGNÓSTICO OPERACIONAL · 2025 · CONFIDENCIAL</div>
+  </div>
+</div>
+
+</div><!-- end slides-wrapper -->
+
+<nav class="nav">
+  <button id="btn-prev" onclick="changeSlide(-1)" disabled>‹</button>
+  <div class="dots" id="dots-container"></div>
+  <div class="slide-counter" id="slide-counter">01 / 12</div>
+  <button id="btn-next" onclick="changeSlide(1)">›</button>
+</nav>
+
+<script>
+const totalSlides = 12;
+let current = 1;
+const dotsEl = document.getElementById('dots-container');
+for(let i=1;i<=totalSlides;i++){const d=document.createElement('div');d.className='dot'+(i===1?' active':'');d.onclick=()=>goTo(i);dotsEl.appendChild(d);}
+function goTo(n){
+  document.getElementById('slide-'+current).classList.remove('active');
+  current=Math.max(1,Math.min(totalSlides,n));
+  document.getElementById('slide-'+current).classList.add('active');
+  document.getElementById('slide-counter').textContent=String(current).padStart(2,'0')+' / '+String(totalSlides).padStart(2,'0');
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i+1===current));
+  document.getElementById('btn-prev').disabled=current===1;
+  document.getElementById('btn-next').disabled=current===totalSlides;
+}
+function changeSlide(dir){goTo(current+dir);}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')changeSlide(1);if(e.key==='ArrowLeft'||e.key==='ArrowUp')changeSlide(-1);});
+let tx=0;document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;});
+document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)changeSlide(dx<0?1:-1);});
+</script>
+</body>
+</html>
